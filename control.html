@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nightmare Clock - Local Controller</title>
+  <style>
+    body {
+      background: #050308;
+      color: #e0e0e0;
+      font-family: 'Georgia', serif;
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+    #controller-sidebar {
+      width: 340px;
+      background: #120c1c;
+      border-right: 1px solid #9d4edd;
+      padding: 25px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 5px 0 20px rgba(0,0,0,0.8);
+      z-index: 10;
+      overflow-y: auto;
+    }
+    h2 {
+      color: #9d4edd;
+      font-size: 1.2rem;
+      border-bottom: 1px solid rgba(157,78,221,0.3);
+      padding-bottom: 8px;
+      margin-bottom: 0;
+    }
+    p {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin: 0;
+    }
+    button {
+      background: rgba(157,78,221,0.2);
+      border: 1px solid rgba(157,78,221,0.5);
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:hover {
+      background: rgba(157,78,221,0.4);
+    }
+    .btn-danger {
+      border-color: #ff0055;
+      background: rgba(255,0,85,0.15);
+    }
+    .btn-danger:hover {
+      background: rgba(255,0,85,0.3);
+    }
+    .calibration-box {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(157,78,221,0.3);
+      padding: 12px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .calibration-box label {
+      font-size: 0.85rem;
+      color: #ffb703;
+      font-weight: bold;
+    }
+    .slider-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #9d4edd;
+    }
+    #angle-readout {
+      width: 45px;
+      text-align: right;
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: #fff;
+    }
+    #display-area {
+      flex: 1;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controller Sidebar -->
+  <div id="controller-sidebar">
+    <h2>Control Deck</h2>
+    <p>Test commands & calibrate hand angles.</p>
+    
+    <div style="display:flex; gap:8px;">
+      <button onclick="sendAction('START')" style="flex:1;">▶ Start</button>
+      <button onclick="sendAction('PAUSE')" style="flex:1;">⏸ Pause</button>
+      <button onclick="sendAction('RESET')" class="btn-danger" style="flex:1;">🔄 Reset</button>
+    </div>
+    
+    <button onclick="sendAction('CHIME')">🔔 Trigger Hourly Chime</button>
+    <button onclick="sendAction('SPIN_PLAYER')">🎯 Spin Random Player</button>
+
+    <!-- Calibration Tool -->
+    <div class="calibration-box">
+      <label>📐 Hand Angle Calibrator</label>
+      <p style="font-size: 0.75rem;">Drag slider to find exact window degrees:</p>
+      
+      <div class="slider-row">
+        <input type="range" id="angle-slider" min="0" max="360" value="0" oninput="onSliderMove(this.value)">
+        <span id="angle-readout">0°</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top:5px;">
+        <button onclick="setSliderAngle(0)">0° (Top)</button>
+        <button onclick="setSliderAngle(60)">60°</button>
+        <button onclick="setSliderAngle(120)">120°</button>
+        <button onclick="setSliderAngle(180)">180°</button>
+        <button onclick="setSliderAngle(240)">240°</button>
+        <button onclick="setSliderAngle(300)">300°</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Display Area -->
+  <div id="display-area">
+    <iframe id="clock-frame" src="./index.html"></iframe>
+  </div>
+
+  <script>
+    const clockFrame = document.getElementById('clock-frame');
+
+    function sendAction(actionName) {
+      clockFrame.contentWindow.postMessage({ action: actionName }, '*');
+    }
+
+    function onSliderMove(val) {
+      document.getElementById('angle-readout').innerText = val + '°';
+      clockFrame.contentWindow.postMessage({ action: 'SET_PLAYER_ANGLE', angle: parseFloat(val) }, '*');
+    }
+
+    function setSliderAngle(val) {
+      document.getElementById('angle-slider').value = val;
+      onSliderMove(val);
+    }
+  </script>
+</body>
+</html>
