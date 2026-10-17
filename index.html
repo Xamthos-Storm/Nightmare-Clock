@@ -127,4 +127,454 @@
 
     .player-slot.active {
       border-color: var(--accent-gold);
-      box-shadow: 0
+      box-shadow: 0 0 20px var(--accent-gold), inset 0 0 10px var(--accent-gold);
+      color: var(--accent-gold);
+      transform: scale(1.15);
+    }
+
+    /* Status Bar Header */
+    #time-display-bar {
+      position: absolute;
+      top: 20px;
+      display: flex;
+      gap: 20px;
+      background: rgba(10, 5, 18, 0.7);
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1px solid rgba(157, 78, 221, 0.3);
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      z-index: 10;
+    }
+
+    /* Controls Drawer Toggle Button */
+    #settings-btn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--panel-bg);
+      border: 1px solid var(--accent-purple);
+      color: var(--accent-purple);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+
+    #settings-btn:hover {
+      opacity: 1.0;
+    }
+
+    /* Admin Settings Panel */
+    #settings-panel {
+      position: fixed;
+      right: -350px;
+      top: 0;
+      width: 320px;
+      height: 100vh;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--accent-purple);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.8);
+      padding: 25px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      transition: right 0.3s ease;
+      z-index: 30;
+      overflow-y: auto;
+    }
+
+    #settings-panel.open {
+      right: 0;
+    }
+
+    #settings-panel h3 {
+      color: var(--accent-purple);
+      border-bottom: 1px solid rgba(157, 78, 221, 0.3);
+      padding-bottom: 8px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+
+    input, button, select {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(157, 78, 221, 0.4);
+      color: #fff;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    button {
+      background: rgba(157, 78, 221, 0.2);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: rgba(157, 78, 221, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="flash-overlay"></div>
+  <div class="vignette"></div>
+
+  <!-- Time Header -->
+  <div id="time-display-bar">
+    <div>EVENT TIME: <span id="event-timer-str">00:00:00</span></div>
+    <div>HOUR: <span id="hour-count">1</span>/6</div>
+  </div>
+
+  <!-- Main Clock Visual Display -->
+  <div id="clock-viewport">
+    <!-- Clock Face -->
+    <div class="clock-layer" id="face-layer">
+      <img id="img-face" class="hand-img" src="./assets/Clock Face.png" alt="Clock Face" style="display:none;">
+      <canvas id="fallback-face" width="600" height="600"></canvas>
+    </div>
+
+    <!-- Player Ring Slots -->
+    <div id="player-ring"></div>
+
+    <!-- Player Selection Hand -->
+    <div class="clock-layer">
+      <img id="img-player-hand" class="hand-img" src="./assets/Active Player Hand.png" alt="Player Hand" style="display:none;">
+      <canvas id="fallback-player-hand" width="600" height="600" style="position:absolute; width:100%; height:100%;"></canvas>
+    </div>
+
+    <!-- Big Hand (6-Hour Event Timer) -->
+    <div class="clock-layer">
+      <img id="img-big-hand" class="hand-img" src="./assets/Timer Hand.png" alt="Big Hand" style="display:none;">
+      <canvas id="fallback-big-hand" width="600" height="600" style="position:absolute; width:100%; height:100%;"></canvas>
+    </div>
+
+    <!-- Little Hand (1-Hour Chime Trigger) -->
+    <div class="clock-layer">
+      <img id="img-little-hand" class="hand-img" src="./assets/Nightmare Hand.png" alt="Little Hand" style="display:none;">
+      <canvas id="fallback-little-hand" width="600" height="600" style="position:absolute; width:100%; height:100%;"></canvas>
+    </div>
+  </div>
+
+  <!-- Admin Controls Toggle -->
+  <button id="settings-btn" title="Open Settings">⚙</button>
+
+  <!-- Control Panel Drawer -->
+  <div id="settings-panel">
+    <h3>Nightmare Controls</h3>
+    
+    <div class="control-group">
+      <label>Playback State</label>
+      <div style="display:flex; gap:10px;">
+        <button id="btn-toggle-play" style="flex:1;">Start Timer</button>
+        <button id="btn-reset" style="flex:1;">Reset</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="speed-select">Time Speed Multiplier</label>
+      <select id="speed-select">
+        <option value="1">1x (Real Time - 6 Hours)</option>
+        <option value="60">60x (1 Sec = 1 Min)</option>
+        <option value="360">360x (Fast Demo Mode)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="player-input">Players (Comma Separated)</label>
+      <input type="text" id="player-input" value="Player 1, Player 2, Player 3, Player 4">
+      <button id="btn-update-players">Update Players</button>
+    </div>
+
+    <div class="control-group">
+      <label>Manual Triggers</label>
+      <button id="btn-trigger-chime">Trigger Hourly Chime</button>
+      <button id="btn-spin-player" style="margin-top:5px;">Spin Player Hand</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Asset Detection & Fallbacks ---
+    const assets = {
+      face: { img: document.getElementById('img-face'), fallback: document.getElementById('fallback-face') },
+      bigHand: { img: document.getElementById('img-big-hand'), fallback: document.getElementById('fallback-big-hand') },
+      littleHand: { img: document.getElementById('img-little-hand'), fallback: document.getElementById('fallback-little-hand') },
+      playerHand: { img: document.getElementById('img-player-hand'), fallback: document.getElementById('fallback-player-hand') }
+    };
+
+    // Audio Element / Web Audio Fallback
+    const chimeAudio = new Audio('./assets/chime.mp3');
+    let audioCtx = null;
+
+    // Verify Image Assets
+    Object.keys(assets).forEach(key => {
+      const item = assets[key];
+      item.img.onload = () => {
+        item.img.style.display = 'block';
+        item.fallback.style.display = 'none';
+      };
+      item.img.onerror = () => {
+        item.img.style.display = 'none';
+        item.fallback.style.display = 'block';
+      };
+    });
+
+    // --- Core State Variables ---
+    let isRunning = false;
+    let totalEventSeconds = 6 * 3600; // 6 Hours
+    let elapsedSeconds = 0;
+    let timeSpeed = 1; // Speed multiplier
+    let players = ["Player 1", "Player 2", "Player 3", "Player 4"];
+    let activePlayerIdx = 0;
+    let targetPlayerAngle = 0;
+    let currentPlayerAngle = 0;
+    let lastProcessedHour = 0;
+
+    // --- Web Audio Synthesizer (Fallback Audio) ---
+    function playFallbackChime() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(110, audioCtx.currentTime); // Low deep bell tone (A2)
+        osc.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 3.0);
+
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3.5);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 3.5);
+      } catch(e) {
+        console.log("Audio play blocked or unavailable");
+      }
+    }
+
+    function triggerChimeSound() {
+      chimeAudio.play().catch(() => {
+        playFallbackChime();
+      });
+    }
+
+    // --- Render Procedural Fallback Graphics ---
+    function drawFallbackFace() {
+      const canvas = document.getElementById('fallback-face');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height, r = w / 2;
+
+      ctx.clearRect(0,0,w,h);
+      ctx.save();
+      ctx.translate(r,r);
+
+      // Outer Rim
+      ctx.beginPath();
+      ctx.arc(0,0, r - 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d0714';
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#9d4edd';
+      ctx.stroke();
+
+      // Inner Dial
+      ctx.beginPath();
+      ctx.arc(0,0, r - 25, 0, Math.PI * 2);
+      ctx.strokeStyle = '#3c096c';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Hour Marks
+      for(let i=0; i<12; i++) {
+        const rad = (i * Math.PI) / 6;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(rad) * (r - 35), Math.sin(rad) * (r - 35));
+        ctx.lineTo(Math.cos(rad) * (r - 20), Math.sin(rad) * (r - 20));
+        ctx.strokeStyle = '#9d4edd';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawFallbackHands() {
+      // Big Hand (Red Needle)
+      let c = document.getElementById('fallback-big-hand');
+      let ctx = c.getContext('2d');
+      ctx.clearRect(0,0,600,600);
+      ctx.save(); ctx.translate(300,300);
+      ctx.beginPath(); ctx.moveTo(0,15); ctx.lineTo(0,-220);
+      ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 6; ctx.stroke();
+      ctx.restore();
+
+      // Little Hand (Purple Dagger)
+      c = document.getElementById('fallback-little-hand');
+      ctx = c.getContext('2d');
+      ctx.clearRect(0,0,600,600);
+      ctx.save(); ctx.translate(300,300);
+      ctx.beginPath(); ctx.moveTo(0,20); ctx.lineTo(0,-160);
+      ctx.strokeStyle = '#9d4edd'; ctx.lineWidth = 8; ctx.stroke();
+      ctx.restore();
+
+      // Player Hand (Gold Arrow)
+      c = document.getElementById('fallback-player-hand');
+      ctx = c.getContext('2d');
+      ctx.clearRect(0,0,600,600);
+      ctx.save(); ctx.translate(300,300);
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-240);
+      ctx.strokeStyle = '#ffb703'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.restore();
+    }
+
+    // --- Render Player Ring Slots ---
+    function renderPlayerSlots() {
+      const container = document.getElementById('player-ring');
+      container.innerHTML = '';
+      const radius = container.clientWidth / 2 - 35;
+      const count = players.length;
+
+      players.forEach((name, idx) => {
+        const angle = (idx / count) * (2 * Math.PI) - (Math.PI / 2);
+        const x = (container.clientWidth / 2) + radius * Math.cos(angle);
+        const y = (container.clientHeight / 2) + radius * Math.sin(angle);
+
+        const slot = document.createElement('div');
+        slot.className = `player-slot ${idx === activePlayerIdx ? 'active' : ''}`;
+        slot.style.left = `${x}px`;
+        slot.style.top = `${y}px`;
+        slot.innerText = name;
+        container.appendChild(slot);
+      });
+    }
+
+    // --- Core Timer & Motion Loop ---
+    let lastTime = performance.now();
+
+    function updateClockLoop(now) {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      if (isRunning) {
+        elapsedSeconds += dt * timeSpeed;
+        if (elapsedSeconds >= totalEventSeconds) {
+          elapsedSeconds = totalEventSeconds;
+          isRunning = false;
+        }
+      }
+
+      // Calculations
+      const currentHour = Math.floor(elapsedSeconds / 3600) + 1;
+      const bigHandAngle = (elapsedSeconds / totalEventSeconds) * 360; // 360deg over 6 hours
+      const littleHandAngle = ((elapsedSeconds % 3600) / 3600) * 360; // 360deg over 1 hour
+
+      // Check Hourly Chime Trigger
+      if (Math.floor(elapsedSeconds / 3600) > lastProcessedHour && elapsedSeconds < totalEventSeconds) {
+        lastProcessedHour = Math.floor(elapsedSeconds / 3600);
+        triggerHourlyEvent();
+      }
+
+      // Update Rotation Visuals
+      document.getElementById('img-big-hand').style.transform = `rotate(${bigHandAngle}deg)`;
+      document.getElementById('fallback-big-hand').style.transform = `rotate(${bigHandAngle}deg)`;
+
+      document.getElementById('img-little-hand').style.transform = `rotate(${littleHandAngle}deg)`;
+      document.getElementById('fallback-little-hand').style.transform = `rotate(${littleHandAngle}deg)`;
+
+      // Smooth interpolation for Player Hand
+      currentPlayerAngle += (targetPlayerAngle - currentPlayerAngle) * 0.05;
+      document.getElementById('img-player-hand').style.transform = `rotate(${currentPlayerAngle}deg)`;
+      document.getElementById('fallback-player-hand').style.transform = `rotate(${currentPlayerAngle}deg)`;
+
+      // Update Header Text
+      const hrs = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+      const secs = String(Math.floor(elapsedSeconds % 60)).padStart(2, '0');
+      document.getElementById('event-timer-str').innerText = `${hrs}:${mins}:${secs}`;
+      document.getElementById('hour-count').innerText = Math.min(currentHour, 6);
+
+      requestAnimationFrame(updateClockLoop);
+    }
+
+    // --- Event Triggers ---
+    function triggerHourlyEvent() {
+      // Audio Chime
+      triggerChimeSound();
+
+      // Screen Red Flash FX
+      const flash = document.getElementById('flash-overlay');
+      flash.style.opacity = '1';
+      setTimeout(() => flash.style.opacity = '0', 800);
+
+      // Spin Player Pointer to a new player
+      spinPlayerHand();
+    }
+
+    function spinPlayerHand() {
+      if (players.length === 0) return;
+      activePlayerIdx = Math.floor(Math.random() * players.length);
+      const slotAngle = (activePlayerIdx / players.length) * 360;
+      targetPlayerAngle += 720 + (slotAngle - (targetPlayerAngle % 360)); // Double full spin before landing
+      setTimeout(renderPlayerSlots, 1200);
+    }
+
+    // --- UI Controls Event Listeners ---
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      document.getElementById('settings-panel').classList.toggle('open');
+    });
+
+    document.getElementById('btn-toggle-play').addEventListener('click', (e) => {
+      isRunning = !isRunning;
+      e.target.innerText = isRunning ? 'Pause Timer' : 'Start Timer';
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      elapsedSeconds = 0;
+      lastProcessedHour = 0;
+      isRunning = false;
+      document.getElementById('btn-toggle-play').innerText = 'Start Timer';
+    });
+
+    document.getElementById('speed-select').addEventListener('change', (e) => {
+      timeSpeed = parseFloat(e.target.value);
+    });
+
+    document.getElementById('btn-update-players').addEventListener('click', () => {
+      const val = document.getElementById('player-input').value;
+      players = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      activePlayerIdx = 0;
+      renderPlayerSlots();
+    });
+
+    document.getElementById('btn-trigger-chime').addEventListener('click', triggerHourlyEvent);
+    document.getElementById('btn-spin-player').addEventListener('click', spinPlayerHand);
+
+    // Initial Setup
+    drawFallbackFace();
+    drawFallbackHands();
+    renderPlayerSlots();
+    requestAnimationFrame(updateClockLoop);
+  </script>
+</body>
+</html>
