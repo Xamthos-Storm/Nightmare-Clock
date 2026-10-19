@@ -13,6 +13,7 @@
       --panel-bg: rgba(18, 12, 28, 0.92);
       --font-family: 'Cinzel', 'Georgia', serif;
     }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -101,6 +102,7 @@
       inset: 0;
       border-radius: 50%;
       pointer-events: none;
+      z-index: 10;
     }
 
     .player-slot {
@@ -129,6 +131,7 @@
       box-shadow: 0 0 20px var(--accent-gold), inset 0 0 10px var(--accent-gold);
       color: var(--accent-gold);
       transform: scale(1.15);
+      z-index: 11;
     }
 
     /* Status Bar Header */
@@ -143,7 +146,7 @@
       border: 1px solid rgba(157, 78, 221, 0.3);
       font-size: 0.95rem;
       letter-spacing: 1px;
-      z-index: 10;
+      z-index: 20;
     }
 
     /* Controls Drawer Toggle Button */
@@ -162,7 +165,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 20;
+      z-index: 30;
       opacity: 0.4;
       transition: opacity 0.2s;
     }
@@ -186,7 +189,7 @@
       flex-direction: column;
       gap: 15px;
       transition: right 0.3s ease;
-      z-index: 30;
+      z-index: 40;
       overflow-y: auto;
     }
 
@@ -229,23 +232,27 @@
     button:hover {
       background: rgba(157, 78, 221, 0.4);
     }
-</style>
+  </style>
 </head>
 <body>
-<div id="flash-overlay"></div>
+
+  <div id="flash-overlay"></div>
   <div class="vignette"></div>
+
   <!-- Time Header -->
-<div id="time-display-bar">
+  <div id="time-display-bar">
     <div>EVENT TIME: <span id="event-timer-str">00:00:00</span></div>
     <div>HOUR: <span id="hour-count">1</span>/6</div>
   </div>
+
   <!-- Main Clock Visual Display -->
-<div id="clock-viewport">
+  <div id="clock-viewport">
     <!-- Clock Face -->
     <div class="clock-layer" id="face-layer">
       <img id="img-face" class="hand-img" src="./assets/Clock Face.png" alt="Clock Face" style="display:none;">
       <canvas id="fallback-face" width="600" height="600"></canvas>
     </div>
+
     <!-- Player Ring Slots -->
     <div id="player-ring"></div>
 
@@ -260,17 +267,21 @@
       <img id="img-little-hand" class="hand-img" src="./assets/Nightmare Hand.png" alt="Little Hand" style="display:none;">
       <canvas id="fallback-little-hand" width="600" height="600" style="position:absolute; width:100%; height:100%;"></canvas>
     </div>
-</div>
-  <!-- Big Hand (6-Hour Event Timer) -->
-<div class="clock-layer">
-    <img id="img-big-hand" class="hand-img" src="./assets/Timer Hand.png" alt="Big Hand" style="display:none;">
-    <canvas id="fallback-big-hand" width="600" height="600" style="position:absolute; width:100%; height:100%;"></canvas>
+
+    <!-- Big Hand (6-Hour Event Timer) -->
+    <div class="clock-layer">
+      <img id="img-big-hand" class="hand-img" src="./assets/Timer Hand.png" alt="Big Hand" style="display:none;">
+      <canvas id="fallback-big-hand" width="600" height="600" style="position:absolute; width:100%; height:100%;"></canvas>
+    </div>
   </div>
+
   <!-- Admin Controls Toggle -->
-<button id="settings-btn" title="Open Settings">⚙</button>
+  <button id="settings-btn" title="Open Settings">⚙</button>
+
   <!-- Control Panel Drawer -->
-<div id="settings-panel">
+  <div id="settings-panel">
     <h3>Nightmare Controls</h3>
+    
     <div class="control-group">
       <label>Playback State</label>
       <div style="display:flex; gap:10px;">
@@ -289,8 +300,8 @@
     </div>
 
     <div class="control-group">
-      <label for="player-input">Players (Comma Separated)</label>
-      <input type="text" id="player-input" value="Player 1, Player 2, Player 3, Player 4">
+      <label for="player-input">Players (Fallback Comma Separated)</label>
+      <input type="text" id="player-input" value="Player 1, Player 2, Player 3, Player 4, Player 5, Player 6">
       <button id="btn-update-players">Update Players</button>
     </div>
 
@@ -299,9 +310,35 @@
       <button id="btn-trigger-chime">Trigger Hourly Chime</button>
       <button id="btn-spin-player" style="margin-top:5px;">Spin Player Hand</button>
     </div>
-</div>
-<script>
-    // --- Asset Detection & Fallbacks ---
+  </div>
+
+  <script>
+    // --- 1. Parse Glide Data from URL Parameters ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const rawGlideData = urlParams.get('playerdata');
+
+    let players = [];
+    try {
+      if (rawGlideData) {
+        players = JSON.parse(decodeURIComponent(rawGlideData));
+      }
+    } catch (e) {
+      console.error("Failed to parse Glide player JSON:", e);
+    }
+
+    // Fallback if URL parameter is empty or unparsed
+    if (!players || players.length === 0) {
+      players = [
+        { name: "Player 1", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" },
+        { name: "Player 2", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150" },
+        { name: "Player 3", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150" },
+        { name: "Player 4", avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150" },
+        { name: "Player 5", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150" },
+        { name: "Player 6", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150" }
+      ];
+    }
+
+    // --- 2. Asset Detection & Fallbacks ---
     const assets = {
       face: { img: document.getElementById('img-face'), fallback: document.getElementById('fallback-face') },
       bigHand: { img: document.getElementById('img-big-hand'), fallback: document.getElementById('fallback-big-hand') },
@@ -309,11 +346,9 @@
       playerHand: { img: document.getElementById('img-player-hand'), fallback: document.getElementById('fallback-player-hand') }
     };
 
-    // Audio Element / Web Audio Fallback
     const chimeAudio = new Audio('./assets/chime.mp3');
     let audioCtx = null;
 
-    // Verify Image Assets
     Object.keys(assets).forEach(key => {
       const item = assets[key];
       item.img.onload = () => {
@@ -326,48 +361,22 @@
       };
     });
 
-    // --- State Shield (Restores State From Browser Memory) ---
+    // --- 3. Core State Variables with localStorage Persistence ---
     let isRunning = localStorage.getItem('nightmare_running') === 'true';
     let totalEventSeconds = 6 * 3600; // 6 Hours
     let elapsedSeconds = parseFloat(localStorage.getItem('nightmare_elapsed')) || 0;
     let timeSpeed = parseFloat(localStorage.getItem('speed_multiplier')) || 1; 
     let lastProcessedHour = parseInt(localStorage.getItem('nightmare_hour')) || Math.floor(elapsedSeconds / 3600);
 
-    // Track active slot allocations (0-5)
-    let currentSlots = [null, null, null, null, null, null];
-
-    // --- Dynamic Player Ingestion (Read from URL query parameter or fallback) ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const rawGlideData = urlParams.get('playerdata');
-
-    let players = [];
-    try {
-      if (rawGlideData) {
-        players = JSON.parse(decodeURIComponent(rawGlideData));
-      } else {
-        // Fallback testing data if no playerdata parameter is present
-        players = [
-          { name: "Player 1", avatar: "https://res.cloudinary.com/glide/image/fetch/w_500,h_500,c_thumb,g_face/https://storage.googleapis.com/glide-prod.appspot.com/uploads-v2/BF1ILoHKgj5GdqY2ol7d/pub/Trm8k4crD5A3i3wvhQcJ.png" },
-          { name: "Player 2", avatar: "https://res.cloudinary.com/glide/image/fetch/w_500,h_500,c_thumb,g_face/https://storage.googleapis.com/glide-prod.appspot.com/uploads-v2/Q4bBQaJHqI2T7OzlPjLW/pub/2sFudF1MVeQiGNkqjGNB.jpg" },
-          { name: "Player 3", avatar: "https://res.cloudinary.com/glide/image/fetch/w_500,h_500,c_thumb,g_face/https://storage.googleapis.com/glide-prod.appspot.com/uploads-v2/Q4bBQaJHqI2T7OzlPjLW/pub/d4FvFz49HF00Wh0PeI0r.jpg" },
-          { name: "Player 4", avatar: "https://res.cloudinary.com/glide/image/fetch/w_500,h_500,c_thumb,g_face/https://storage.googleapis.com/glide-prod.appspot.com/uploads-v2/Q4bBQaJHqI2T7OzlPjLW/pub/5cjNU7fDu7TlBJYkDrU1.jpg" },
-          { name: "Player 5", avatar: "https://res.cloudinary.com/glide/image/fetch/w_500,h_500,c_thumb,g_face/https://storage.googleapis.com/glide-prod.appspot.com/uploads-v2/Q4bBQaJHqI2T7OzlPjLW/pub/mkIrkiA3MHGsh3IYw1xm.jpg" },
-          { name: "Player 6", avatar: "https://res.cloudinary.com/glide/image/fetch/w_500,h_500,c_thumb,g_face/https://storage.googleapis.com/glide-prod.appspot.com/uploads-v2/Q4bBQaJHqI2T7OzlPjLW/pub/VMEwF9nXKppVNHLZDcfR.jpg" }
-        ];
-      }
-    } catch (e) {
-      console.error("Failed to parse URL player data:", e);
-    }
-
     let activePlayerIdx = 0;
     let targetPlayerAngle = 0;
     let currentPlayerAngle = 0;
 
-    // Set UI dropdown state matching restored multiplier
-    document.getElementById('speed-select').value = String(timeSpeed);
-    document.getElementById('btn-toggle-play').innerText = isRunning ? 'Pause Timer' : 'Start Timer';
+    if (isRunning) {
+      document.getElementById('btn-toggle-play').innerText = 'Pause Timer';
+    }
 
-    // --- Web Audio Synthesizer (Fallback Audio) ---
+    // --- Audio Synthesizer Fallback ---
     function playFallbackChime() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -377,7 +386,7 @@
         const gain = audioCtx.createGain();
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(110, audioCtx.currentTime); // Low deep bell tone (A2)
+        osc.frequency.setValueAtTime(110, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 3.0);
 
         gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
@@ -389,7 +398,7 @@
         osc.start();
         osc.stop(audioCtx.currentTime + 3.5);
       } catch(e) {
-        console.log("Audio play blocked or unavailable");
+        console.log("Audio play blocked");
       }
     }
 
@@ -409,7 +418,6 @@
       ctx.save();
       ctx.translate(r,r);
 
-      // Outer Rim
       ctx.beginPath();
       ctx.arc(0,0, r - 10, 0, Math.PI * 2);
       ctx.fillStyle = '#0d0714';
@@ -418,14 +426,12 @@
       ctx.strokeStyle = '#9d4edd';
       ctx.stroke();
 
-      // Inner Dial
       ctx.beginPath();
       ctx.arc(0,0, r - 25, 0, Math.PI * 2);
       ctx.strokeStyle = '#3c096c';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Hour Marks
       for(let i=0; i<12; i++) {
         const rad = (i * Math.PI) / 6;
         ctx.beginPath();
@@ -435,12 +441,10 @@
         ctx.lineWidth = 3;
         ctx.stroke();
       }
-
       ctx.restore();
     }
 
     function drawFallbackHands() {
-      // Big Hand (Red Needle)
       let c = document.getElementById('fallback-big-hand');
       let ctx = c.getContext('2d');
       ctx.clearRect(0,0,600,600);
@@ -449,7 +453,6 @@
       ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 6; ctx.stroke();
       ctx.restore();
 
-      // Little Hand (Purple Dagger)
       c = document.getElementById('fallback-little-hand');
       ctx = c.getContext('2d');
       ctx.clearRect(0,0,600,600);
@@ -458,7 +461,6 @@
       ctx.strokeStyle = '#9d4edd'; ctx.lineWidth = 8; ctx.stroke();
       ctx.restore();
 
-      // Player Hand (Gold Arrow)
       c = document.getElementById('fallback-player-hand');
       ctx = c.getContext('2d');
       ctx.clearRect(0,0,600,600);
@@ -468,79 +470,34 @@
       ctx.restore();
     }
 
-    // --- Sticky Player Slot Allocation & DOM Rendering ---
-    function updatePlayerSlots(incomingPlayers) {
-      let newSlots = [null, null, null, null, null, null];
-      let assignedIDs = new Set();
-
-      // 1. Keep active players in their existing slots
-      for (let i = 0; i < 6; i++) {
-        let currentP = currentSlots[i];
-        if (currentP && incomingPlayers.some(p => p.name === currentP.name)) {
-          newSlots[i] = currentP;
-          assignedIDs.add(currentP.name);
-        }
-      }
-
-      // 2. Identify incoming players not currently in a slot
-      let newcomers = incomingPlayers.filter(p => !assignedIDs.has(p.name));
-
-      // 3. Collect available empty slot indices
-      let emptyIndices = [];
-      for (let i = 0; i < 6; i++) {
-        if (newSlots[i] === null) emptyIndices.push(i);
-      }
-
-      // 4. Fill empty slots with incoming newcomers
-      for (let i = 0; i < emptyIndices.length; i++) {
-        if (newcomers[i]) {
-          newSlots[emptyIndices[i]] = newcomers[i];
-        }
-      }
-
-      currentSlots = newSlots;
-      renderPlayerSlotsToDOM();
-    }
-
-    function renderPlayerSlotsToDOM() {
+    // --- Render Player Ring Slots ---
+    function renderPlayerSlots() {
       const container = document.getElementById('player-ring');
-      if (!container) return;
       container.innerHTML = '';
 	  
-      // Exact tuned window coordinates
       const windowCoords = [
-        { x: 40.4, y: 36.8 }, // Window 1: Top-Left
-        { x: 59.8, y: 36.9 }, // Window 2: Top-Right
-        { x: 66.3, y: 49.9 }, // Window 3: Middle-Right
-        { x: 61.5, y: 61.5 }, // Window 4: Bottom-Right
-        { x: 38.5, y: 61.5 }, // Window 5: Bottom-Left
-        { x: 33.8, y: 49.7 }  // Window 6: Middle-Left
+        { x: 40.4, y: 36.8 },
+        { x: 59.8, y: 36.9 },
+        { x: 66.3, y: 49.9 },
+        { x: 61.5, y: 61.5 },
+        { x: 38.5, y: 61.5 },
+        { x: 33.8, y: 49.7 }
       ];
 
-      currentSlots.forEach((player, idx) => {
-        if (!player) return;
+      players.forEach((player, idx) => {
         const coord = windowCoords[idx % windowCoords.length];
-
         const slot = document.createElement('div');
         slot.className = `player-slot ${idx === activePlayerIdx ? 'active' : ''}`;
         slot.style.left = `${coord.x}%`;
         slot.style.top = `${coord.y}%`;
-        slot.style.position = 'absolute';
-        slot.style.width = '86px';
-        slot.style.height = '86px';
-        slot.style.marginLeft = '-43px';
-        slot.style.marginTop = '-43px';
-        
+
+        const avatarUrl = player.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
         slot.innerHTML = `
-          <img src="${player.avatar}" alt="${player.name}" 
+          <img src="${avatarUrl}" alt="${player.name || 'Player'}" 
                style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; border: 2px solid rgba(157,78,221,0.6);">
         `;
         container.appendChild(slot);
       });
-    }
-
-    function renderPlayerSlots() {
-      updatePlayerSlots(players);
     }
 
     // --- Core Timer & Motion Loop ---
@@ -556,38 +513,31 @@
           elapsedSeconds = totalEventSeconds;
           isRunning = false;
         }
-
-        // Save progress to local storage continuously
         localStorage.setItem('nightmare_elapsed', elapsedSeconds);
         localStorage.setItem('nightmare_running', isRunning);
         localStorage.setItem('nightmare_hour', lastProcessedHour);
       }
 
-      // Calculations
       const currentHour = Math.floor(elapsedSeconds / 3600) + 1;
-      const bigHandAngle = (elapsedSeconds / totalEventSeconds) * 360; // 360deg over 6 hours
-      const littleHandAngle = ((elapsedSeconds % 3600) / 3600) * 360; // 360deg over 1 hour
+      const bigHandAngle = (elapsedSeconds / totalEventSeconds) * 360;
+      const littleHandAngle = ((elapsedSeconds % 3600) / 3600) * 360;
 
-      // Check Hourly Chime Trigger
       if (Math.floor(elapsedSeconds / 3600) > lastProcessedHour && elapsedSeconds < totalEventSeconds) {
         lastProcessedHour = Math.floor(elapsedSeconds / 3600);
         localStorage.setItem('nightmare_hour', lastProcessedHour);
         triggerHourlyEvent();
       }
 
-      // Update Rotation Visuals
       document.getElementById('img-big-hand').style.transform = `rotate(${bigHandAngle}deg)`;
       document.getElementById('fallback-big-hand').style.transform = `rotate(${bigHandAngle}deg)`;
 
       document.getElementById('img-little-hand').style.transform = `rotate(${littleHandAngle}deg)`;
       document.getElementById('fallback-little-hand').style.transform = `rotate(${littleHandAngle}deg)`;
 
-      // Smooth interpolation for Player Hand
       currentPlayerAngle += (targetPlayerAngle - currentPlayerAngle) * 0.05;
       document.getElementById('img-player-hand').style.transform = `rotate(${currentPlayerAngle}deg)`;
       document.getElementById('fallback-player-hand').style.transform = `rotate(${currentPlayerAngle}deg)`;
 
-      // Update Header Text
       const hrs = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
       const mins = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
       const secs = String(Math.floor(elapsedSeconds % 60)).padStart(2, '0');
@@ -600,12 +550,9 @@
     // --- Event Triggers ---
     function triggerHourlyEvent() {
       triggerChimeSound();
-
-      // Screen Red Flash FX
       const flash = document.getElementById('flash-overlay');
       flash.style.opacity = '1';
       setTimeout(() => flash.style.opacity = '0', 800);
-
       spinPlayerHand();
     }
 
@@ -613,18 +560,9 @@
       if (players.length === 0) return;
       activePlayerIdx = Math.floor(Math.random() * players.length);
       
-      const windowAngles = [
-        54,  // Index 0: Window 1 (Top-Left)
-        127, // Index 1: Window 2 (Top-Right)
-        180, // Index 2: Window 3 (Middle-Right)
-        225, // Index 3: Window 4 (Bottom-Right)
-        315, // Index 4: Window 5 (Bottom-Left)
-        360  // Index 5: Window 6 (Middle-Left)
-      ];
-      
+      const windowAngles = [54, 127, 180, 225, 315, 360];
       const targetDeg = windowAngles[activePlayerIdx];
 
-      // Add full extra spins before landing on target window
       targetPlayerAngle += 720 + (targetDeg - (targetPlayerAngle % 360));
       setTimeout(renderPlayerSlots, 1200);
     }
@@ -645,7 +583,6 @@
       lastProcessedHour = 0;
       isRunning = false;
       document.getElementById('btn-toggle-play').innerText = 'Start Timer';
-
       localStorage.removeItem('nightmare_elapsed');
       localStorage.removeItem('nightmare_running');
       localStorage.removeItem('nightmare_hour');
@@ -658,8 +595,7 @@
 
     document.getElementById('btn-update-players').addEventListener('click', () => {
       const val = document.getElementById('player-input').value;
-      const rawNames = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-      players = rawNames.map(n => ({ name: n, avatar: '' }));
+      players = val.split(',').map(s => ({ name: s.trim(), avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' })).filter(s => s.name.length > 0);
       activePlayerIdx = 0;
       renderPlayerSlots();
     });
@@ -672,29 +608,24 @@
     drawFallbackHands();
     renderPlayerSlots();
     requestAnimationFrame(updateClockLoop);
-	
-    // --- Listen for Outside Controls (via postMessage) ---
+
+    // --- PostMessage support for external commands ---
     window.addEventListener('message', (event) => {
       const data = event.data;
       if (!data) return;
 
       if (data.action === 'START') {
         isRunning = true;
-        localStorage.setItem('nightmare_running', 'true');
         const btn = document.getElementById('btn-toggle-play');
         if(btn) btn.innerText = 'Pause Timer';
       } else if (data.action === 'PAUSE') {
         isRunning = false;
-        localStorage.setItem('nightmare_running', 'false');
         const btn = document.getElementById('btn-toggle-play');
         if(btn) btn.innerText = 'Start Timer';
       } else if (data.action === 'RESET') {
         elapsedSeconds = 0;
         lastProcessedHour = 0;
         isRunning = false;
-        localStorage.removeItem('nightmare_elapsed');
-        localStorage.removeItem('nightmare_running');
-        localStorage.removeItem('nightmare_hour');
       } else if (data.action === 'CHIME') {
         triggerHourlyEvent();
       } else if (data.action === 'SPIN_PLAYER') {
@@ -704,5 +635,6 @@
         currentPlayerAngle = data.angle;
       }
     });
+  </script>
 </body>
 </html>
